@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Samuel Audet
+ * Copyright (C) 2009-2018 Samuel Audet
  *
  * Licensed either under the Apache License, Version 2.0, or (at your option)
  * under the terms of the GNU General Public License as published by
@@ -66,6 +66,7 @@ import org.bytedeco.javacpp.IntPointer;
 import org.bytedeco.javacpp.Loader;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.PointerPointer;
+import org.bytedeco.javacpp.PointerScope;
 
 import static org.bytedeco.javacpp.avcodec.*;
 import static org.bytedeco.javacpp.avdevice.*;
@@ -296,6 +297,13 @@ public class FFmpegFrameGrabber extends FrameGrabber {
 
     static ReadCallback readCallback = new ReadCallback();
     static SeekCallback seekCallback = new SeekCallback();
+    static {
+        PointerScope s = PointerScope.getInnerScope();
+        if (s != null) {
+            s.detach(readCallback);
+            s.detach(seekCallback);
+        }
+    }
 
     private InputStream     inputStream;
     private AVIOContext     avio;
@@ -959,7 +967,8 @@ public class FFmpegFrameGrabber extends FrameGrabber {
                 // Convert the image into BGR or GRAY format that OpenCV uses
                 img_convert_ctx = sws_getCachedContext(img_convert_ctx,
                         video_c.width(), video_c.height(), video_c.pix_fmt(),
-                        frame.imageWidth, frame.imageHeight, getPixelFormat(), SWS_BILINEAR,
+                        frame.imageWidth, frame.imageHeight, getPixelFormat(),
+                        imageScalingFlags != 0 ? imageScalingFlags : SWS_BILINEAR,
                         null, null, (DoublePointer)null);
                 if (img_convert_ctx == null) {
                     throw new Exception("sws_getCachedContext() error: Cannot initialize the conversion context.");

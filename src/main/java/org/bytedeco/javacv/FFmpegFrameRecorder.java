@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Samuel Audet
+ * Copyright (C) 2009-2018 Samuel Audet
  *
  * Licensed either under the Apache License, Version 2.0, or (at your option)
  * under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ import org.bytedeco.javacpp.IntPointer;
 import org.bytedeco.javacpp.Loader;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.PointerPointer;
+import org.bytedeco.javacpp.PointerScope;
 import org.bytedeco.javacpp.ShortPointer;
 
 import static org.bytedeco.javacpp.avcodec.*;
@@ -308,6 +309,12 @@ public class FFmpegFrameRecorder extends FrameRecorder {
     }
 
     static WriteCallback writeCallback = new WriteCallback();
+    static {
+        PointerScope s = PointerScope.getInnerScope();
+        if (s != null) {
+            s.detach(writeCallback);
+        }
+    }
 
     private OutputStream outputStream;
     private AVIOContext avio;
@@ -503,8 +510,11 @@ public class FFmpegFrameRecorder extends FrameRecorder {
                of which frame timestamps are represented. for fixed-fps content,
                timebase should be 1/framerate and timestamp increments should be
                identically 1. */
-            video_c.time_base(av_inv_q(frame_rate));
-            video_st.time_base(av_inv_q(frame_rate));
+            AVRational time_base = av_inv_q(frame_rate);
+            video_c.time_base(time_base);
+            video_st.time_base(time_base);
+            video_st.avg_frame_rate(frame_rate);
+            video_st.codec().time_base(time_base); // "deprecated", but this is actually required
             if (gopSize >= 0) {
                 video_c.gop_size(gopSize); /* emit one intra frame every gopSize frames at most */
             }
@@ -912,7 +922,8 @@ public class FFmpegFrameRecorder extends FrameRecorder {
             if (video_c.pix_fmt() != pixelFormat || video_c.width() != width || video_c.height() != height) {
                 /* convert to the codec pixel format if needed */
                 img_convert_ctx = sws_getCachedContext(img_convert_ctx, width, height, pixelFormat,
-                        video_c.width(), video_c.height(), video_c.pix_fmt(), SWS_BILINEAR,
+                        video_c.width(), video_c.height(), video_c.pix_fmt(),
+                        imageScalingFlags != 0 ? imageScalingFlags : SWS_BILINEAR,
                         null, null, (DoublePointer)null);
                 if (img_convert_ctx == null) {
                     throw new Exception("sws_getCachedContext() error: Cannot initialize the conversion context.");
@@ -1181,6 +1192,8 @@ public class FFmpegFrameRecorder extends FrameRecorder {
                 }
             }
         }
+
+        av_packet_unref(avPacket);
     }
 
     public boolean recordPacket(AVPacket pkt) throws Exception {
@@ -1190,27 +1203,30 @@ public class FFmpegFrameRecorder extends FrameRecorder {
         }
 
         AVStream in_stream = ifmt_ctx.streams(pkt.stream_index());
-
-        pkt.dts(AV_NOPTS_VALUE);
-        pkt.pts(AV_NOPTS_VALUE);
+/**
+ * Repair the problem of error decoding and playback caused by the absence of dts/pts 
+ * in the output audio/video file or audio/video stream,
+ * Comment out this line of code so that PTS / DTS can specify the timestamp manually.
+ */
+//        pkt.dts(AV_NOPTS_VALUE);
+//        pkt.pts(AV_NOPTS_VALUE);
         pkt.pos(-1);
-
         if (in_stream.codec().codec_type() == AVMEDIA_TYPE_VIDEO && video_st != null) {
 
             pkt.stream_index(video_st.index());
             pkt.duration((int) av_rescale_q(pkt.duration(), in_stream.codec().time_base(), video_st.codec().time_base()));
-
+            pkt.pts(av_rescale_q_rnd(pkt.pts(), in_stream.time_base(), video_st.time_base(),(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX)));//Increase pts calculation
+            pkt.dts(av_rescale_q_rnd(pkt.dts(), in_stream.time_base(), video_st.time_base(),(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX)));//Increase dts calculation
             writePacket(AVMEDIA_TYPE_VIDEO, pkt);
 
         } else if (in_stream.codec().codec_type() == AVMEDIA_TYPE_AUDIO && audio_st != null && (audioChannels > 0)) {
 
             pkt.stream_index(audio_st.index());
             pkt.duration((int) av_rescale_q(pkt.duration(), in_stream.codec().time_base(), audio_st.codec().time_base()));
-
+            pkt.pts(av_rescale_q_rnd(pkt.pts(), in_stream.time_base(), audio_st.time_base(),(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX)));//Increase pts calculation
+            pkt.dts(av_rescale_q_rnd(pkt.dts(), in_stream.time_base(), audio_st.time_base(),(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX)));//Increase dts calculation
             writePacket(AVMEDIA_TYPE_AUDIO, pkt);
         }
-
-        av_free_packet(pkt);
 
         return true;
     }

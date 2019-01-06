@@ -1,4 +1,20 @@
 
+ * Set `pts` and `dts` for `AVPacket` in `FFmpegFrameRecorder.recordPacket()` ([pull #1097](https://github.com/bytedeco/javacv/pull/1097))
+ * Prevent premature deallocations with `LeptonicaFrameConverter` ([issue bytedeco/javacpp#272](https://github.com/bytedeco/javacpp/issues/272)) and `OpenCVFrameConverter.IplImage` ([issue #1101](https://github.com/bytedeco/javacv/issues/1101))
+ * Fix `OpenCVFrameGrabber` from crashing when in `ImageMode.GRAY`
+ * Add support for multiple inputs to `FFmpegFrameFilter` ([issue #955](https://github.com/bytedeco/javacv/issues/955))
+ * Fix fps in output of `FFmpegFrameRecorder` by setting deprecated `AVStream.codec.time_base` ([issue #1069](https://github.com/bytedeco/javacv/issues/1069))
+ * Fix memory leak in `FFmpegFrameRecorder` on `writePacket()` ([issue #1068](https://github.com/bytedeco/javacv/issues/1068))
+ * Upgrade dependencies for OpenCV 4.0.0, FFmpeg 4.1, FlyCapture 2.13.3.31, Leptonica 1.77.0, and Tesseract 4.0.0
+
+### October 15, 2018 version 1.4.3
+ * Add `imageScalingFlags` property to `FrameGrabber` and `FrameRecorder`, with `SWS_BILINEAR` as default for FFmpeg ([issue #845](https://github.com/bytedeco/javacv/issues/845))
+ * Add `OpenCVFrameConverter.ToOrgOpenCvCoreMat` to easily but efficiently get image data from official Java API of OpenCV ([issue bytedeco/javacpp#38](https://github.com/bytedeco/javacpp/issues/38))
+ * Keep globally shared callback objects for FFmpeg out of `PointerScope` ([issue #911](https://github.com/bytedeco/javacv/issues/911))
+ * Upgrade dependencies for OpenCV 3.4.3, FFmpeg 4.0.2, and Tesseract 4.0.0-rc2
+ * Update the `Demo` class to use the C++ API of OpenCV ([issue #1042](https://github.com/bytedeco/javacv/issues/1042))
+ * Add new `DeepLearningFaceDetection` ([pull #1041](https://github.com/bytedeco/javacv/pull/1041)) and `PerspectiveWarpDemo` ([pull #1066](https://github.com/bytedeco/javacv/pull/1066)) samples
+
 ### July 17, 2018 version 1.4.2
  * Allow `FFmpegFrameGrabber` to use accelerated decoders with `videoCodecName` and `audioCodecName` properties ([pull #948](https://github.com/bytedeco/javacv/pull/948))
  * Add new `KazemiFacemarkExample` and `LBFFacemarkExampleWithVideo` samples ([pull #1030](https://github.com/bytedeco/javacv/pull/1030))
