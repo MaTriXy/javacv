@@ -25,11 +25,14 @@ package org.bytedeco.javacv;
 import java.io.File;
 import java.nio.FloatBuffer;
 import java.util.Arrays;
-import org.bytedeco.javacpp.opencv_core;
+import org.bytedeco.opencv.global.opencv_core;
 
-import static org.bytedeco.javacpp.opencv_calib3d.*;
-import static org.bytedeco.javacpp.opencv_core.*;
-import static org.bytedeco.javacpp.opencv_imgproc.*;
+import org.bytedeco.opencv.opencv_calib3d.*;
+import org.bytedeco.opencv.opencv_core.*;
+import org.bytedeco.opencv.opencv_imgproc.*;
+import static org.bytedeco.opencv.global.opencv_calib3d.*;
+import static org.bytedeco.opencv.global.opencv_core.*;
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
 /**
  *
@@ -734,8 +737,8 @@ public class ProjectiveDevice {
         CvMat R2 = R23x3.get(); CvMat P2 = P23x4.get();
         Size imageSize = new Size((peer.imageWidth  + imageWidth )/2,
                                   (peer.imageHeight + imageHeight)/2); // ?
-        stereoRectify(cvarrToMat(peer.cameraMatrix),     cvarrToMat(cameraMatrix),
-                      cvarrToMat(peer.distortionCoeffs), cvarrToMat(distortionCoeffs),
+        stereoRectify(cvarrToMat(peer.cameraMatrix), cvarrToMat(peer.distortionCoeffs),
+                      cvarrToMat(     cameraMatrix), cvarrToMat(     distortionCoeffs),
                       imageSize, cvarrToMat(relativeR), cvarrToMat(relativeT),
                       cvarrToMat(R1), cvarrToMat(R2), cvarrToMat(P1), cvarrToMat(P2),
                       new Mat(), 0, -1, new Size(), null, null);

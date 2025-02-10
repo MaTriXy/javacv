@@ -28,8 +28,8 @@ import java.nio.ShortBuffer;
 import org.bytedeco.javacpp.Loader;
 import org.junit.Test;
 
-import static org.bytedeco.javacpp.avcodec.*;
-import static org.bytedeco.javacpp.avutil.*;
+import static org.bytedeco.ffmpeg.global.avcodec.*;
+import static org.bytedeco.ffmpeg.global.avutil.*;
 import static org.junit.Assert.*;
 
 /**
@@ -49,7 +49,7 @@ public class FrameFilterTest {
             recorder.setFormat("mov");
             recorder.setPixelFormat(AV_PIX_FMT_YUV420P);
             recorder.setFrameRate(30);
-            recorder.setVideoCodec(AV_CODEC_ID_H265);
+            recorder.setVideoCodec(AV_CODEC_ID_H264);
             recorder.setVideoQuality(10);
             recorder.setSampleFormat(AV_SAMPLE_FMT_FLTP);
             recorder.setSampleRate(48000);
@@ -81,6 +81,8 @@ public class FrameFilterTest {
                     grabber.getImageWidth(), grabber.getImageHeight(), grabber.getAudioChannels());
             filter.setPixelFormat(grabber.getPixelFormat());
             filter.setSampleFormat(grabber.getSampleFormat());
+            filter.setFrameRate(grabber.getFrameRate());
+            filter.setSampleRate(grabber.getSampleRate());
             filter.start();
 
             FFmpegFrameFilter nullFilter = new FFmpegFrameFilter(null, null, 0, 0, 0);
@@ -112,10 +114,13 @@ public class FrameFilterTest {
                         assertEquals(frame2.samples.length, frame3.samples.length);
                         assertEquals(frame2.samples[0].limit() / 2, frame3.samples[0].limit());
                     }
+                    assertEquals(frame2.timestamp, frame3.timestamp);
                 }
                 nullFilter.push(frame2);
                 assertEquals(frame2, nullFilter.pull());
             }
+            filter.push(null);
+            assertEquals(null, filter.pull());
             assertEquals(a, c);
             assertEquals(b, d);
             assertEquals(null, grabber.grab());
@@ -124,6 +129,7 @@ public class FrameFilterTest {
             grabber.restart();
             grabber.stop();
             grabber.release();
+            frame.close();
         } catch (Exception e) {
             e.printStackTrace();
             fail("Exception should not have been thrown: " + e);
@@ -191,14 +197,17 @@ public class FrameFilterTest {
                     }
                     if (frame3.samples != null) {
                         d++;
-                        assertEquals(2, frame3.audioChannels);
+                        assertEquals(4, frame3.audioChannels);
                         assertEquals(1, frame3.samples.length);
-                        assertTrue(frame3.samples[0] instanceof ByteBuffer);
+                        assertTrue(frame3.samples[0] instanceof ShortBuffer);
                         assertEquals(frame2.samples.length, frame3.samples.length);
-                        assertEquals(frame2.samples[0].limit(), frame3.samples[0].limit());
+                        assertEquals(2 * frame2.samples[0].limit(), frame3.samples[0].limit());
                     }
                 }
             }
+            filter.push(0, null);
+            filter.push(1, null);
+            assertEquals(null, filter.pull());
             assertEquals(a, c);
             assertEquals(b, d);
             assertEquals(null, grabber.grab());
@@ -207,6 +216,7 @@ public class FrameFilterTest {
             grabber.restart();
             grabber.stop();
             grabber.release();
+            frame.close();
         } catch (Exception e) {
             e.printStackTrace();
             fail("Exception should not have been thrown: " + e);

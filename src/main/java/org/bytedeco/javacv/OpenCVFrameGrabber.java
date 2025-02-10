@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Samuel Audet
+ * Copyright (C) 2009-2019 Samuel Audet
  *
  * Licensed either under the Apache License, Version 2.0, or (at your option)
  * under the terms of the GNU General Public License as published by
@@ -23,11 +23,16 @@
 package org.bytedeco.javacv;
 
 import java.io.File;
+import java.util.Map;
+import java.util.Map.Entry;
 import org.bytedeco.javacpp.Loader;
 
-import static org.bytedeco.javacpp.opencv_core.*;
-import static org.bytedeco.javacpp.opencv_imgproc.*;
-import static org.bytedeco.javacpp.opencv_videoio.*;
+import org.bytedeco.opencv.opencv_core.*;
+import org.bytedeco.opencv.opencv_imgproc.*;
+import org.bytedeco.opencv.opencv_videoio.*;
+import static org.bytedeco.opencv.global.opencv_core.*;
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
+import static org.bytedeco.opencv.global.opencv_videoio.*;
 
 /**
  *
@@ -50,7 +55,7 @@ public class OpenCVFrameGrabber extends FrameGrabber {
             throw loadingException;
         } else {
             try {
-                Loader.load(org.bytedeco.javacpp.opencv_highgui.class);
+                Loader.load(org.bytedeco.opencv.global.opencv_highgui.class);
             } catch (Throwable t) {
                 throw loadingException = new Exception("Failed to load " + OpenCVFrameGrabber.class, t);
             }
@@ -178,6 +183,25 @@ public class OpenCVFrameGrabber extends FrameGrabber {
         return Math.round(getLengthInFrames() * 1000000L / getFrameRate());
     }
 
+    public double getOption(int propId) {
+        if (capture != null) {
+            return capture.get(propId);
+        }
+        return Double.parseDouble(options.get(Integer.toString(propId)));
+    }
+    
+    /**
+     *
+     * @param propId Property ID, look at opencv_videoio for possible values
+     * @param value
+     */
+    public void setOption(int propId, double value) {
+        options.put(Integer.toString(propId), Double.toString(value));
+        if (capture != null) {
+            capture.set(propId, value);
+        }
+    }
+
     public void start() throws Exception {
         if (filename != null && filename.length() > 0) {
             if (apiPreference > 0) {
@@ -216,6 +240,10 @@ public class OpenCVFrameGrabber extends FrameGrabber {
         }
         if (imageMode == ImageMode.RAW) {
             capture.set(CAP_PROP_CONVERT_RGB, 0);
+        }
+
+        for (Entry<String, String> e : options.entrySet()) {
+            capture.set(Integer.parseInt(e.getKey()), Double.parseDouble(e.getValue()));
         }
 
         Mat mat = new Mat();
